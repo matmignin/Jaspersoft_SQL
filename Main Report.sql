@@ -50,6 +50,10 @@ SELECT
     coa_sign.max_circulationid AS coa_version,
     coa_results.manufacture_date,
     coa_results.expiration_date,
+    coa_results.po_number,
+    coa_results.number_of_boxes,
+    coa_results.quantity_per_box,
+    coa_results.total_quantity,
     coa_results.carton_lot,
     coa_results.fill_weight,
     -- CoA something ??
@@ -189,6 +193,10 @@ FROM
             tr3.textresult AS carton_lot,
             tr4.numericalresulttext | | ' ' | | DECODE(tr4.numericalresulttext, NULL, NULL, tr4.unit) AS fill_weight,
             tr6.textresult AS customer_lot,
+            tr7.textresult AS po_number,
+            tr8.textresult AS number_of_boxes,
+            tr9.textresult AS quantity_per_box,
+            tr10.textresult AS total_quantity,
             trq.approvedby,
             trq.approvaldate
         FROM
@@ -232,6 +240,26 @@ FROM
             tr6.resultid = 'Customer Lot' AND
             tr6.resultvaluation = 'OK' AND
             tr6.deletion = 'N'
+            LEFT JOIN testresult tr7
+            ON tr7.testguid = t.testguid AND
+            tr7.resultid = 'PO' AND
+            tr7.resultvaluation = 'OK' AND
+            tr7.deletion = 'N'
+            LEFT JOIN testresult tr8
+            ON tr8.testguid = t.testguid AND
+            tr8.resultid = 'Number of boxes' AND
+            tr8.resultvaluation = 'OK' AND
+            tr8.deletion = 'N'
+            LEFT JOIN testresult tr9
+            ON tr9.testguid = t.testguid AND
+            tr9.resultid = 'Quantity per box' AND
+            tr9.resultvaluation = 'OK' AND
+            tr9.deletion = 'N'
+            LEFT JOIN testresult tr10
+            ON tr10.testguid = t.testguid AND
+            tr10.resultid = 'Total Quantity' AND
+            tr10.resultvaluation = 'OK' AND
+            tr10.deletion = 'N'
         WHERE
             trq.batchnumber IS NOT NULL AND
             trq.product IS NOT NULL AND
