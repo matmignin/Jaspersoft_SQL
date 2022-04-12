@@ -196,7 +196,7 @@ FROM
             tr7.textresult AS po_number,
             tr8.textresult AS number_of_boxes,
             tr9.textresult AS quantity_per_box,
-            tr10.textresult AS total_quantity,
+          	tr8.textresult * tr9.textresult AS total_quantity,
             trq.approvedby,
             trq.approvaldate
         FROM
@@ -255,11 +255,11 @@ FROM
             tr9.resultid = 'Quantity per box' AND
             tr9.resultvaluation = 'OK' AND
             tr9.deletion = 'N'
-            LEFT JOIN testresult tr10
-            ON tr10.testguid = t.testguid AND
-            tr10.resultid = 'Total Quantity' AND
-            tr10.resultvaluation = 'OK' AND
-            tr10.deletion = 'N'
+           -- LEFT JOIN testresult tr10
+            --ON tr10.testguid = t.testguid AND
+            --tr10.resultid = 'Total Quantity' AND
+            --tr10.resultvaluation = 'OK' AND
+            --tr10.deletion = 'N'
         WHERE
             trq.batchnumber IS NOT NULL AND
             trq.product IS NOT NULL AND
