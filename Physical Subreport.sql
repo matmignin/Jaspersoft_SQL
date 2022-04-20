@@ -1,4 +1,5 @@
-SELECT tr.resultid AS testing,
+SELECT
+tr.resultid AS testing,
   DECODE(tr.resulttype,NULL,NULL,DECODE(tr.requirement, NULL, t.requirement, tr.requirement)) AS specification_range,
   CASE
   WHEN tr.resulttype = 'NUMERIC' AND tr.status = 70 THEN
@@ -13,7 +14,10 @@ SELECT tr.resultid AS testing,
     'Not Tested'
   END AS result,
   sm.description AS method,
-  tr.generic01   AS notebook_ref
+  tr.generic01   AS notebook_ref,
+  tr.resultdate  AS phy_test_date
+  -- or   ps.receiveddate AS phy_test_date --- for date recieved
+  -- ($F{TESTING}=="Organoleptic Sensory Test" && $F{PHY_TEST_DATE} >= "20220420000000000")?"Organoleptic Sensory Taste Test":$F{TESTING}
 FROM (
   SELECT DISTINCT ps.sampleguid, ps.batchnumber, ps.formulationid
   FROM physicalsample ps
