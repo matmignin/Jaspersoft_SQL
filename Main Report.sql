@@ -50,10 +50,14 @@ SELECT
     coa_sign.max_circulationid AS coa_version,
     coa_results.manufacture_date,
     coa_results.expiration_date,
-    coa_results.po_number,
-    coa_results.number_of_boxes,
-    coa_results.quantity_per_box,
-    coa_results.total_quantity,
+    coa_results.po_number,          -- (1.3.1)
+    coa_results.number_of_boxes,    -- (1.3.2)
+    coa_results.quantity_per_box,   -- (1.3.2)
+    coa_results.total_quantity,     -- (1.3.2)
+    coa_results.other_boxes,        -- (1.3.2)
+    coa_results.other_quantity,     -- (1.3.2)
+    coa_results.other_total_quantity,     -- (1.3.2)
+    coa_results.total_net_quantity, -- (1.3.2)
     coa_results.carton_lot,
     coa_results.fill_weight,
     -- CoA something ??
@@ -193,10 +197,14 @@ FROM
             tr3.textresult AS carton_lot,
             tr4.numericalresulttext | | ' ' | | DECODE(tr4.numericalresulttext, NULL, NULL, tr4.unit) AS fill_weight,
             tr6.textresult AS customer_lot,
-            tr7.textresult AS po_number,
-            tr8.textresult AS number_of_boxes,
-            tr9.textresult AS quantity_per_box,
-          	tr8.textresult * tr9.textresult AS total_quantity,
+            tr7.textresult AS po_number,                              -- (1.3.1)
+            TO_NUMBER(tr8.textresult) AS number_of_boxes,                        -- (1.3.2)
+            TO_NUMBER(tr9.textresult) AS quantity_per_box,                       -- (1.3.2)
+          	tr8.textresult * tr9.textresult AS total_quantity,        -- (1.3.2)
+            TO_NUMBER(tr10.textresult) AS other_boxes,                           -- (1.3.2)
+            TO_NUMBER(tr11.textresult) AS other_quantity,                        -- (1.3.2)
+          	tr10.textresult * tr11.textresult AS other_total_quantity,  -- (1.3.2)
+          	(tr8.textresult * tr9.textresult) + (tr10.textresult * tr11.textresult) AS total_net_quantity,  -- (1.3.2)
             trq.approvedby,
             trq.approvaldate
         FROM
@@ -218,17 +226,14 @@ FROM
             JOIN testresult tr2
             ON tr2.testguid = t.testguid AND
             tr2.resultid = 'Expiration Date' AND
-            tr2.resultvaluation = 'OK' AND
             tr2.deletion = 'N'
             LEFT JOIN testresult tr3
             ON tr3.testguid = t.testguid AND
             tr3.resultid = 'Carton Lot' AND
-            tr3.resultvaluation = 'OK' AND
             tr3.deletion = 'N'
             LEFT JOIN testresult tr4
             ON tr4.testguid = t.testguid AND
             tr4.resultid = 'Fill Weight' AND
-            tr4.resultvaluation = 'OK' AND
             tr4.deletion = 'N'
             LEFT JOIN testresult tr5
             ON tr5.testguid = t.testguid AND
@@ -238,28 +243,17 @@ FROM
             LEFT JOIN testresult tr6
             ON tr6.testguid = t.testguid AND
             tr6.resultid = 'Customer Lot' AND
-            tr6.resultvaluation = 'OK' AND
             tr6.deletion = 'N'
-            LEFT JOIN testresult tr7
-            ON tr7.testguid = t.testguid AND
-            tr7.resultid = 'PO' AND
-            tr7.resultvaluation = 'OK' AND
-            tr7.deletion = 'N'
-            LEFT JOIN testresult tr8
-            ON tr8.testguid = t.testguid AND
-            tr8.resultid = 'Number of boxes' AND
-            tr8.resultvaluation = 'OK' AND
-            tr8.deletion = 'N'
-            LEFT JOIN testresult tr9
-            ON tr9.testguid = t.testguid AND
-            tr9.resultid = 'Quantity per box' AND
-            tr9.resultvaluation = 'OK' AND
-            tr9.deletion = 'N'
-           -- LEFT JOIN testresult tr10
-            --ON tr10.testguid = t.testguid AND
-            --tr10.resultid = 'Total Quantity' AND
-            --tr10.resultvaluation = 'OK' AND
-            --tr10.deletion = 'N'
+            LEFT JOIN testresult tr7  -- (1.3.1)
+                ON tr7.testguid = t.testguid AND tr7.resultid = 'PO Number'  AND tr7.deletion = 'N'
+            LEFT JOIN testresult tr8  -- (1.3.2)
+                ON tr8.testguid = t.testguid AND tr8.resultid = 'Number of Boxes'  AND tr8.deletion = 'N'
+            LEFT JOIN testresult tr9  -- (1.3.2)
+                ON tr9.testguid = t.testguid AND tr9.resultid = 'Quantity per Box'  AND tr9.deletion = 'N'
+            LEFT JOIN testresult tr10  -- (1.3.2)
+                ON tr10.testguid = t.testguid AND tr10.resultid = 'Other Boxes' AND tr10.deletion = 'N'
+            LEFT JOIN testresult tr11  -- (1.3.2)
+                ON tr11.testguid = t.testguid AND tr11.resultid = 'Other Quantity' AND tr11.deletion = 'N'
         WHERE
             trq.batchnumber IS NOT NULL AND
             trq.product IS NOT NULL AND
