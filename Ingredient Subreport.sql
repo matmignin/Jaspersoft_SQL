@@ -187,7 +187,9 @@ FROM
         LEFT JOIN testresultrequirement trr ON trr.resultguid = tr.resultguid
                 AND trr.valuationcode = 1
         WHERE tr.deletion = 'N'
-        AND tr.flagisfinalresult = 'Y' ) ir
+        AND tr.flagisfinalresult = 'Y'
+        AND configurationid <> 'Stability' -- (1.3.2) Fix Stability from showing up on the CoA
+        ) ir
     ON UPPER(i.ingredientid) = UPPER(ir.resultid)
 WHERE i.deletion = 'N'
 AND NOT(UPPER(i.ingredientid) LIKE 'MULTI%'
