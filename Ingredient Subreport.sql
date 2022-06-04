@@ -188,7 +188,7 @@ FROM
                 AND trr.valuationcode = 1
         WHERE tr.deletion = 'N'
         AND tr.flagisfinalresult = 'Y'
-        AND configurationid <> 'Stability' -- (1.3.2) Fix Stability from showing up on the CoA
+        AND configurationid <> 'Stability' -- (1.3.3) Fix Stability from showing up on the CoA
         ) ir
     ON UPPER(i.ingredientid) = UPPER(ir.resultid)
 WHERE i.deletion = 'N'
