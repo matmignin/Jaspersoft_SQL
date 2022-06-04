@@ -9,14 +9,20 @@ SELECT
     ir.method,
     ir.generic01 AS notebook_ref,
    	ir.status,
+    
+    
     -- Ingredient name/description
     -- Handling The Generic Ingredients A-Q + mulitpart list 
     CASE -- if i.IngredientId contain Generic Ingredient ___ then combine it with the discription from the other i.IngredientIds that also contain Generic ingredient**
         WHEN UPPER(i.ingredientid) LIKE 'MULTI-PART INGREDIENT LIST%'
-        THEN
-            (SELECT LISTAGG(i2.description) WITHIN GROUP (ORDER BY i2.ingredientid)
-             FROM ingredient i2
-             WHERE UPPER(i2.ingredientid) LIKE 'MULTI%' AND i2.formulationguid = i.formulationguid)
+        THEN -- then combine it with other rows that contain "MULTI...""
+            (
+             SELECT LISTAGG(i2.description) --aggrigates a multiple rows together into one and orders it
+             WITHIN GROUP (ORDER BY i2.ingredientid) -- then orders 
+             FROM ingredient i2 -- referenceing the ingredientid twice
+             WHERE UPPER(i2.ingredientid) LIKE 'MULTI%' -- if ingredientid starts with "Multi"
+             AND i2.formulationguid = i.formulationguid -- and if the rows have matching formulationguid
+             )
         WHEN UPPER(i.ingredientid) LIKE 'GENERIC INGREDIENT A%'
         THEN
             (SELECT LISTAGG(i2.description) WITHIN GROUP (ORDER BY i2.ingredientid)
@@ -27,21 +33,25 @@ SELECT
             (SELECT LISTAGG(i2.description) WITHIN GROUP (ORDER BY i2.ingredientid)
              FROM ingredient i2
              WHERE UPPER(ingredientid) LIKE 'GENERIC INGREDIENT Q%' AND i2.formulationguid = i.formulationguid)
-        ELSE i.description
-    END AS ingredient,
+        ELSE i.description --if the ingredient.Description doesn't have Generic ingredient, the just return the discription
+    END AS ingredient, --call the output of this "loop" Ingredient
+  
+  
     -- Result display value
     CASE
-        WHEN ir.resulttype = 'NUMERIC'
-            AND ir.status = 70
-            AND (ir.resultvaluation <> 'SKIP LOT' OR ir.resultvaluation IS NULL)
-        THEN
-	        ir.prefix||TRIM(TO_CHAR(REGEXP_SUBSTR(REPLACE(ir.numericalresulttext,ir.prefix,''),'^\d+'),'999,999,999'))
-             || (CASE
-                    WHEN INSTR(ir.numericalresulttext,'.') > 0
-                    THEN
-                        SUBSTR(ir.numericalresulttext,INSTR(ir.numericalresulttext,'.'))
-                    END)
-            || DECODE(ir.unit,NULL,NULL,' '||ir.unit)
+        -- format any results that numeric, relased, not skiploted or blank 
+        WHEN ir.resulttype = 'NUMERIC' AND ir.status = 70 AND (ir.resultvaluation <> 'SKIP LOT' OR ir.resultvaluation IS NULL)
+        -- format the result to be "<Prefix>comma-separated digetsand add commas
+        THEN ir.prefix||TRIM(TO_CHAR(REGEXP_SUBSTR(REPLACE(ir.numericalresulttext,ir.prefix,''),'^\d+'),'999,999,999'))
+             || ( -- whenever the reesult contains a decemal but doesn't start with it
+                 CASE WHEN INSTR(ir.numericalresulttext,'.') > 0
+                 -- extract any digets after the decimal
+                 THEN SUBSTR(ir.numericalresulttext,INSTR(ir.numericalresulttext,'.'))
+                 END
+                )
+                -- if Unit is Blank, the return blank, 
+             || DECODE(ir.unit,NULL,NULL,
+                    ' '||ir.unit) -- else return a space and unit
         WHEN ir.resulttype IN ('LIST','TEXT')
             AND ir.status = 70
             AND (ir.resultvaluation <> 'SKIP LOT' OR ir.resultvaluation IS NULL)
@@ -106,18 +116,19 @@ FROM
             AND t.deletion = 'N'
             AND t.requestguid IN
                 -- All tests for the batch in one or more requests
-                (SELECT requestguid
-                 FROM testrequest
-                 WHERE  batchnumber =  $P{BATCHNUMBER}
-                 AND deletion = 'N')
-        LEFT JOIN smmethod sm ON sm.methodid = t.methodid
-                AND sm.versionno = t.methodversionno
-                AND sm.deletion = 'N'
-        LEFT JOIN testresultrequirement trr ON trr.resultguid = tr.resultguid
-                AND trr.valuationcode = 1
-        WHERE tr.deletion = 'N'
-        AND tr.flagisfinalresult = 'Y'
-        AND configurationid <> 'Stability' -- (1.3.3) Fix Stability from showing up on the CoA
+        (
+          SELECT requestguid
+          FROM testrequest
+          WHERE  batchnumber =  $P{BATCHNUMBER}
+          AND deletion = 'N')
+          LEFT JOIN smmethod sm ON sm.methodid = t.methodid
+          AND sm.versionno = t.methodversionno
+          AND sm.deletion = 'N'
+          LEFT JOIN testresultrequirement trr ON trr.resultguid = tr.resultguid
+          AND trr.valuationcode = 1
+          WHERE tr.deletion = 'N'
+          AND tr.flagisfinalresult = 'Y'
+          AND configurationid <> 'Stability' -- (1.3.3) Fix Stability from showing up on the CoA
         ) ir
     ON UPPER(i.ingredientid) = UPPER(ir.resultid)
 WHERE i.deletion = 'N'
