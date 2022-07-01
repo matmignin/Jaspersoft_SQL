@@ -9,6 +9,7 @@ SELECT
     ir.method,
     ir.generic01 AS notebook_ref,  -- JASPERSOFT parameter
     ir.status,
+    trq.generic03 AS annual_sample, ---[testing] Annual update (pending)
 
     -- Ingredient name/descriptiona
     CASE
@@ -43,7 +44,7 @@ SELECT
         -- format the NUMERIC results that are relased, not skiploted or blank
             THEN -- format and Concat the results
                 ir.prefix -- start with prefix
-                || --trim the numbers between the prefix and the first decimal
+                || --will trim the numbers between the prefix and the first decimal
                     TRIM(TO_CHAR(REGEXP_SUBSTR(REPLACE(ir.numericalresulttext,ir.prefix,''),'^\d+'),'999,999,999'))
                 || ( -- get the first chunk of digets before the period
                     CASE
@@ -75,14 +76,14 @@ SELECT
     END AS result  -- JASPERSOFT parameter
 
 -- Ingredients for this product/formulation (ir)
-FROM ingredient i   -- TABLE ingrident
-    JOIN formulation f -- TABLE formulation
+FROM ingredient i   --T (i) ingrident
+    JOIN formulation f --T (f) formulation
     -- joins the matching FormulationGUID On Ingredients and Formulation
         ON i.formulationguid = f.formulationguid
         -- and if the formulations given through LMS parameter matches the Productid and Formulationid from the query
         AND f.productid =  $P{PRODUCTID} AND f.formulationid  =  $P{FORMULATIONID} AND f.deletion = 'N'
--- Join test results to the ingredients
-    LEFT JOIN ( -- joins the Test(t) and TestResult(tr) and TestResultRequirement(trr)
+-- will Join test results to the ingredients (ir)
+    LEFT JOIN ( -- will joins the Test(t) and TestResult(tr) and TestResultRequirement(trr)
         SELECT
         t.testid, t.testgroup,
         tr.resultid, tr.resultguid, tr.resulttype, tr.prefix, tr.numericalresulttext, tr.textresult, tr.unit, tr.requirement, tr.resultvaluation, tr.status, tr.resultdate,tr.generic01,
@@ -94,28 +95,28 @@ FROM ingredient i   -- TABLE ingrident
             WHEN tr.resulttype <> 'LIST' AND (tr.resultvaluation <> 'SKIP LOT' OR tr.resultvaluation IS NULL)
             THEN DECODE(tr.resulttype,NULL,NULL,tr.requirement)
             ELSE  ''
-        END AS specification_range,  -- JASPERSOFT parameter
+        END AS specification_range,  --P (SPECIFICATION_RANGE)
         -- Method
         CASE
             WHEN (tr.resultvaluation <> 'SKIP LOT' OR tr.resultvaluation IS NULL)
             THEN sm.description
             ELSE  ''
-        END AS method -- JASPERSOFT parameter
+        END AS method --P (METHOD)
 
-        FROM testresult tr  --TABLE testresult
-            JOIN test t     -- TABLE test
+        FROM testresult tr  --T (tr) testresult
+            JOIN test t     --T (t) test
             ON t.testguid = tr.testguid AND t.deletion = 'N' AND t.requestguid
                 IN ( -- All tests for the batch in one or more requests
                     SELECT requestguid
-                    FROM testrequest
+                    FROM testrequest trq
                     WHERE  batchnumber =  $P{BATCHNUMBER} AND deletion = 'N'
                 )
-        LEFT JOIN smmethod sm  -- TABLE smmethod  (sm)
+        LEFT JOIN smmethod sm  --T (sm) smmethod
             ON sm.methodid = t.methodid AND sm.versionno = t.methodversionno AND sm.deletion = 'N'
-        LEFT JOIN testresultrequirement trr -- TABLE  testresultrequirement (trr)
+        LEFT JOIN testresultrequirement trr --T (trr) testresultrequirement
             ON trr.resultguid = tr.resultguid AND trr.valuationcode = 1
             WHERE tr.deletion = 'N' AND tr.flagisfinalresult = 'Y' AND configurationid <> 'Stability'
-    ) ir -- used at the top
+    ) ir            --__Joining of results to ingredients (ir) Used at top
     ON UPPER(i.ingredientid) = UPPER(ir.resultid)
     WHERE i.deletion = 'N'
     AND NOT(UPPER(i.ingredientid) LIKE 'MULTI%'
