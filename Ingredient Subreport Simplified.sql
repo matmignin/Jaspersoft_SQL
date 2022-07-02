@@ -87,7 +87,9 @@ FROM
             AND f.deletion = 'N'
     -- Join test results to the ingredients
     LEFT JOIN
-        (SELECT t.testid, t.testgroup,
+    --__ creat a new table and call it ir
+      (
+        SELECT t.testid, t.testgroup,
                 tr.resultid, tr.resultguid, tr.resulttype, tr.prefix, tr.numericalresulttext, tr.textresult, tr.unit,
                 tr.requirement, tr.resultvaluation, tr.status, tr.resultdate,tr.generic01,
                 trr.listvalue,
@@ -111,31 +113,40 @@ FROM
                         sm.description
                     ELSE  ''
                 END AS method --{METHOD}
+                
+        --__ All tests for the batch in one or more requests      
         FROM testresult tr --[tr] test result and [t] test
-        JOIN test t ON t.testguid = tr.testguid
-            AND t.deletion = 'N'
-            AND t.requestguid IN
-                -- All tests for the batch in one or more requests
-        (
-          SELECT requestguid
-          FROM testrequest
-          WHERE  batchnumber =  $P{BATCHNUMBER}
-          AND deletion = 'N')
-          LEFT JOIN smmethod sm ON sm.methodid = t.methodid
-          AND sm.versionno = t.methodversionno
-          AND sm.deletion = 'N'
-
-          LEFT JOIN testresultrequirement trr ON trr.resultguid = tr.resultguid
-          AND trr.valuationcode = 1
-          WHERE tr.deletion = 'N'
-          AND tr.flagisfinalresult = 'Y'
-          AND configurationid <> 'Stability' -- (1.3.3) Fix Stability from showing up on the CoA
+        JOIN test t 
+          ON t.testguid = tr.testguid                   AND t.deletion = 'N'
+            AND t.requestguid 
+              IN (SELECT requestguid
+                FROM testrequest
+                WHERE batchnumber = $P{BATCHNUMBER}     AND deletion = 'N')
           
-        ) ir
-    ON UPPER(i.ingredientid) = UPPER(ir.resultid)
+          -- join the sample method if matches
+          LEFT JOIN smmethod sm 
+            ON sm.methodid = t.methodid
+              AND sm.versionno = t.methodversionno      AND sm.deletion = 'N'
+              
+          -- [trr] join testresultRequirement with test result
+          LEFT JOIN testresultrequirement trr 
+            ON trr.resultguid = tr.resultguid
+              AND trr.valuationcode = 1
+            WHERE tr.deletion = 'N'
+              AND tr.flagisfinalresult = 'Y'
+              AND configurationid <> 'Stability' --__(1.3.3) Fix Stability from showing up on the CoA
+      ) ir ON UPPER(i.ingredientid) = UPPER(ir.resultid)
+        --// ir.specification_range
+        --// test_date
+        --// ir.method,  
+        --// notebook_ref
+        --// ir.status
+
+
 WHERE i.deletion = 'N'
-AND NOT(UPPER(i.ingredientid) LIKE 'MULTI%'
+  AND NOT(UPPER(i.ingredientid) LIKE 'MULTI%'
 	AND SUBSTR(i.ingredientid,-1,1) <> 1)
 	AND NOT(UPPER(i.ingredientid) LIKE 'GENERIC INGREDIENT%'
 	AND SUBSTR(i.ingredientid,-1,1) <> 1)
+	
 ORDER BY i.position
