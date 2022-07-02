@@ -29,29 +29,29 @@ SELECT tr.resultid AS testing,
     THEN
       tr.textresult||DECODE(tr.unit,NULL,NULL,' '||tr.unit)
     WHEN tr.status = 10
---x!! AND tr.deletion = 'N' AND tr.flagisfinalresult = 'Y'    
+--x!! AND tr.deletion = 'N' AND tr.flagisfinalresult = 'Y'
     THEN
       'pending'
     ELSE
-      'Not Tested' 
+      'Not Tested'
     END AS result,                    --{RESULT}
 
 
   TO_CHAR(TO_DATE(SUBSTR(tr.resultdate,1,8),'YYYYMMDD'),'DD-MON-YYYY')
                 AS test_date,   --{TEST_DATE}
-  
+
   sm.description AS method,     --{METHOD}
-  
+
   tr.generic01 AS notebook_ref, --{NOTEBOOK_REF}
 
   (SELECT dv.description
     FROM domainvalue dv       --[dv] domainvalue
-    WHERE UPPER(dv.domainid)  = 'REPORT PARAMETERS' 
-      AND UPPER(dv.value)     = 'DATE FORMAT' 
+    WHERE UPPER(dv.domainid)  = 'REPORT PARAMETERS'
+      AND UPPER(dv.value)     = 'DATE FORMAT'
       AND dv.deletion         = 'N'
   ) AS report_date_format      --{REPORT_DATE_FORMAT}
 
-FROM 
+FROM
   --__create a new "table" and call it [psi]      generic01=lot   geniric04=blister
   (
     SELECT DISTINCT ps.sampleguid, ps.batchnumber, ps.generic01, ps.generic04, ps.formulationid
@@ -64,32 +64,32 @@ FROM
         AND UPPER(t.testgroup) = 'MICRO'             AND t.deletion = 'N'
     WHERE ps.batchnumber IS NOT NULL                 AND ps.deletion = 'N'
   ) psi                       --[psi]
-  
+
   JOIN testresult tr  --[tr]
     ON tr.sampleguid = psi.sampleguid              AND tr.deletion = 'N'
-      
+
   JOIN test t         --[t]
     ON t.testguid = tr.testguid
       AND UPPER(t.testgroup) = 'MICRO'             AND t.deletion = 'N'
       --!! look into test table
-  
+
   LEFT JOIN testresultrequirement trr  --[trr]
     ON trr.resultguid = tr.resultguid
       AND trr.valuationcode = 1
-    
-  LEFT JOIN smmethod sm  --[sm] 
+
+  LEFT JOIN smmethod sm  --[sm]
     ON sm.methodid = t.methodid
       AND sm.versionno = t.methodversionno         AND sm.deletion = 'N'
-      
+
   LEFT JOIN physicalsample ps  --[ps]
     ON ps.sampleguid = psi.sampleguid
-    
+
   LEFT JOIN specificationtestresult str --[str]
     ON str.specificationid = ps.specificationid
       AND str.versionno = ps.specificationversionno
       AND str.testid = t.testid
       AND str.resultid = tr.resultid              AND str.deletion = 'N'
-      
+
   LEFT JOIN specificationtest st  --[st]
     ON st.specificationid = str.specificationid
       AND st.versionno = str.versionno
@@ -98,21 +98,22 @@ FROM
 
 
 WHERE psi.batchnumber = $P{MICBATCHNUMBER}
-  AND 
-    (($P{MICPKGLOT} IS NOT NULL 
+  AND
+    (($P{MICPKGLOT} IS NOT NULL
       AND psi.generic01 = $P{MICPKGLOT})
       OR $P{MICPKGLOT} IS NULL)
-  AND 
+  AND
     (($P{MICBLISTERLOT} IS NOT NULL
       AND psi.generic04 = $P{MICBLISTERLOT})
       OR $P{MICBLISTERLOT} IS NULL)
-  AND 
+  AND
      (st.deletion IS NULL
       OR (st.deletion IS NOT NULL AND st.deletion = 'N'
-      
---!! AND tr.flagisfinalresult = 'Y' 
---look up st table columns and see if result is in there
-      ))
 
-ORDER BY 
+
+      )
+AND tr.flagisfinalresult = 'Y' --!! WORKS look up st table columns and see if result is in there
+      )
+
+ORDER BY
   DECODE(st.seqno,NULL,t.seqno,NULL), DECODE(str.seqno,NULL,tr.sequencenumber,str.seqno)
