@@ -29,7 +29,7 @@ SELECT tr.resultid AS testing,
     THEN
       tr.textresult||DECODE(tr.unit,NULL,NULL,' '||tr.unit)
     WHEN tr.status = 10
---!! AND tr.deletion = 'N' AND tr.flagisfinalresult = 'Y'    
+--x!! AND tr.deletion = 'N' AND tr.flagisfinalresult = 'Y'    
     THEN
       'pending'
     ELSE
@@ -58,7 +58,6 @@ FROM
     FROM physicalsample ps      --[ps]
     JOIN testresult tr          --[tr]
       ON tr.sampleguid = ps.sampleguid                AND tr.deletion = 'N'
---!! AND tr.flagisfinalresult = 'Y'        
 
     JOIN test t                 --[t]
       ON t.testguid = tr.testguid
@@ -72,6 +71,7 @@ FROM
   JOIN test t         --[t]
     ON t.testguid = tr.testguid
       AND UPPER(t.testgroup) = 'MICRO'             AND t.deletion = 'N'
+      --!! look into test table
   
   LEFT JOIN testresultrequirement trr  --[trr]
     ON trr.resultguid = tr.resultguid
@@ -108,7 +108,11 @@ WHERE psi.batchnumber = $P{MICBATCHNUMBER}
       OR $P{MICBLISTERLOT} IS NULL)
   AND 
      (st.deletion IS NULL
-      OR (st.deletion IS NOT NULL AND st.deletion = 'N'))
+      OR (st.deletion IS NOT NULL AND st.deletion = 'N'
+      
+--!! AND tr.flagisfinalresult = 'Y' 
+--look up st table columns and see if result is in there
+      ))
 
 ORDER BY 
   DECODE(st.seqno,NULL,t.seqno,NULL), DECODE(str.seqno,NULL,tr.sequencenumber,str.seqno)
