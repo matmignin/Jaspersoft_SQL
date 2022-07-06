@@ -35,11 +35,33 @@ SELECT
              WHERE UPPER(ingredientid) LIKE 'GENERIC INGREDIENT Q%' AND i2.formulationguid = i.formulationguid)
 --!
         WHEN UPPER(i.ingredientid) LIKE 'INGREDIENT NOTE%'
+        AND
+        (SELECT trq.generic03
+            FROM testrequest trq
+            JOIN test t
+                ON t.requestguid = trq.requestguid
+            WHERE batchnumber = $P{BATCHNUMBER})
+
+            AND trq.batchnumber = $P{BATCHNUMBER}
+              IN (SELECT requestguid
+                FROM testrequest
+                WHERE batchnumber = $P{BATCHNUMBER}     AND deletion = 'N')
         THEN
             SUBSTR(i.description, 1, Instr(i.description, ';', -1, 1) -1)
+
+
+                  WHEN UPPER(i.ingredientid) LIKE 'INGREDIENT NOTE%'
+      AND   (SELECT generic03
+                 FROM testrequest
+                 WHERE  batchnumber =  $P{BATCHNUMBER}
+                 	AND generic03 LIKE 'Yes'
+                )
+        THEN
+				SUBSTR(i.description, 1, Instr(i.description, ';', -1, 1) -1)
+            
 --!
         ELSE i.description --if the ingredient.Description doesn't have Generic ingredient, the just return the discription
-    END AS ingredient, --call the output of this "loop" Ingredient
+    END AS ingredient, --{INGREDIENT} --call the output of this "loop" Ingredient
 
 
     -- Result display value
