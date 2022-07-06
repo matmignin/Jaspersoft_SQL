@@ -6,7 +6,7 @@ SELECT tr.resultid AS testing,
     ELSE
       --__if tr.resulttype is blank, specification_range=blank, ELSE=tr.requiremnt
       DECODE(tr.resulttype,NULL,NULL,tr.requirement) END
-  AS specification_range, --{SPECIFICATION_RANGE}
+  AS specification_range,             --{SPECIFICATION_RANGE}
 
   CASE WHEN tr.resulttype = 'NUMERIC' AND tr.status = 70
     THEN
@@ -34,63 +34,62 @@ SELECT tr.resultid AS testing,
       'pending'
     ELSE
       'Not Tested'
-    END AS result,                    --{RESULT}
+    END AS result,                        --{RESULT}
 
 
   TO_CHAR(TO_DATE(SUBSTR(tr.resultdate,1,8),'YYYYMMDD'),'DD-MON-YYYY')
-                AS test_date,   --{TEST_DATE}
+                AS test_date,             --{TEST_DATE}
 
-  sm.description AS method,     --{METHOD}
+  sm.description AS method,               --{METHOD}
 
-  tr.generic01 AS notebook_ref, --{NOTEBOOK_REF}
+  tr.generic01 AS notebook_ref,           --{NOTEBOOK_REF}
 
   (SELECT dv.description
-    FROM domainvalue dv       --[dv] domainvalue
+    FROM domainvalue dv                   --[dv] domainvalue
     WHERE UPPER(dv.domainid)  = 'REPORT PARAMETERS'
       AND UPPER(dv.value)     = 'DATE FORMAT'
       AND dv.deletion         = 'N'
-  ) AS report_date_format      --{REPORT_DATE_FORMAT}
+  ) AS report_date_format                 --{REPORT_DATE_FORMAT}
 
 FROM
-  --__create a new "table" and call it [psi]      generic01=lot   geniric04=blister
+  --|create a new "table" and call it [psi]      generic01=lot   geniric04=blister
   (
     SELECT DISTINCT ps.sampleguid, ps.batchnumber, ps.generic01, ps.generic04, ps.formulationid
-    FROM physicalsample ps      --[ps]
-    JOIN testresult tr          --[tr]
+    FROM physicalsample ps                  --[ps]
+    JOIN testresult tr                      --[tr]
       ON tr.sampleguid = ps.sampleguid                AND tr.deletion = 'N'
 
-    JOIN test t                 --[t]
+    JOIN test t                             --[t]
       ON t.testguid = tr.testguid
         AND UPPER(t.testgroup) = 'MICRO'             AND t.deletion = 'N'
     WHERE ps.batchnumber IS NOT NULL                 AND ps.deletion = 'N'
-  ) psi                       --[psi]
+  ) psi                                     --[psi]
 
-  JOIN testresult tr  --[tr]
+  JOIN testresult tr                        --[tr]
     ON tr.sampleguid = psi.sampleguid              AND tr.deletion = 'N'
 
-  JOIN test t         --[t]
+  JOIN test t                               --[t]
     ON t.testguid = tr.testguid
       AND UPPER(t.testgroup) = 'MICRO'             AND t.deletion = 'N'
-      --!! look into test table
 
-  LEFT JOIN testresultrequirement trr  --[trr]
+  LEFT JOIN testresultrequirement trr       --[trr]
     ON trr.resultguid = tr.resultguid
       AND trr.valuationcode = 1
 
-  LEFT JOIN smmethod sm  --[sm]
+  LEFT JOIN smmethod sm                     --[sm]
     ON sm.methodid = t.methodid
       AND sm.versionno = t.methodversionno         AND sm.deletion = 'N'
 
-  LEFT JOIN physicalsample ps  --[ps]
+  LEFT JOIN physicalsample ps               --[ps]
     ON ps.sampleguid = psi.sampleguid
 
-  LEFT JOIN specificationtestresult str --[str]
+  LEFT JOIN specificationtestresult str     --[str]
     ON str.specificationid = ps.specificationid
       AND str.versionno = ps.specificationversionno
       AND str.testid = t.testid
       AND str.resultid = tr.resultid              AND str.deletion = 'N'
 
-  LEFT JOIN specificationtest st  --[st]
+  LEFT JOIN specificationtest st              --[st]
     ON st.specificationid = str.specificationid
       AND st.versionno = str.versionno
       AND st.testguid = str.testguid
@@ -108,12 +107,10 @@ WHERE psi.batchnumber = $P{MICBATCHNUMBER}
       OR $P{MICBLISTERLOT} IS NULL)
   AND
      (st.deletion IS NULL
-      OR (st.deletion IS NOT NULL AND st.deletion = 'N'
-
-
-      )
-AND tr.flagisfinalresult = 'Y' --!! WORKS look up st table columns and see if result is in there
+      OR (st.deletion IS NOT NULL AND st.deletion = 'N')
+      AND tr.flagisfinalresult = 'Y' --1.3.3 (Hide invalide Micro tests)
       )
 
 ORDER BY
-  DECODE(st.seqno,NULL,t.seqno,NULL), DECODE(str.seqno,NULL,tr.sequencenumber,str.seqno)
+  DECODE(st.seqno,NULL,t.seqno,st.seqno), --1.3.3 (fixed THEN from NULL to st.seqno)
+  DECODE(str.seqno,NULL,tr.sequencenumber,str.seqno)

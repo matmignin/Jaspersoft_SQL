@@ -33,6 +33,11 @@ SELECT
             (SELECT LISTAGG(i2.description) WITHIN GROUP (ORDER BY i2.ingredientid)
              FROM ingredient i2
              WHERE UPPER(ingredientid) LIKE 'GENERIC INGREDIENT Q%' AND i2.formulationguid = i.formulationguid)
+--!
+        WHEN UPPER(i.ingredientid) LIKE 'INGREDIENT NOTE%'
+        THEN
+            SUBSTR(i.description, 1, Instr(i.description, ';', -1, 1) -1)
+--!
         ELSE i.description --if the ingredient.Description doesn't have Generic ingredient, the just return the discription
     END AS ingredient, --call the output of this "loop" Ingredient
 
@@ -113,32 +118,32 @@ FROM
                         sm.description
                     ELSE  ''
                 END AS method --{METHOD}
-                
-        --__ All tests for the batch in one or more requests      
+
+        --__ All tests for the batch in one or more requests
         FROM testresult tr --[tr] test result and [t] test
-        JOIN test t 
+        JOIN test t
           ON t.testguid = tr.testguid                   AND t.deletion = 'N'
-            AND t.requestguid 
+            AND t.requestguid
               IN (SELECT requestguid
                 FROM testrequest
                 WHERE batchnumber = $P{BATCHNUMBER}     AND deletion = 'N')
-          
+
           -- join the sample method if matches
-          LEFT JOIN smmethod sm 
+          LEFT JOIN smmethod sm
             ON sm.methodid = t.methodid
               AND sm.versionno = t.methodversionno      AND sm.deletion = 'N'
-              
-          -- [trr] join testresultRequirement with test result
-          LEFT JOIN testresultrequirement trr 
+
+
+          LEFT JOIN testresultrequirement trr -- [trr] join testresultRequirement with test result
             ON trr.resultguid = tr.resultguid
               AND trr.valuationcode = 1
             WHERE tr.deletion = 'N'
               AND tr.flagisfinalresult = 'Y'
               AND configurationid <> 'Stability' --__(1.3.3) Fix Stability from showing up on the CoA
-      ) ir ON UPPER(i.ingredientid) = UPPER(ir.resultid)
+      ) ir ON UPPER(i.ingredientid) = UPPER(ir.resultid) --[ir]
         --// ir.specification_range
         --// test_date
-        --// ir.method,  
+        --// ir.method,
         --// notebook_ref
         --// ir.status
 
@@ -148,5 +153,5 @@ WHERE i.deletion = 'N'
 	AND SUBSTR(i.ingredientid,-1,1) <> 1)
 	AND NOT(UPPER(i.ingredientid) LIKE 'GENERIC INGREDIENT%'
 	AND SUBSTR(i.ingredientid,-1,1) <> 1)
-	
+
 ORDER BY i.position
