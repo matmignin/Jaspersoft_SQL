@@ -20,8 +20,6 @@ SELECT
     coa_primary.generic06 AS coated_lot,
     dv.description AS ship_to_parms,
     coa_results.customer_lot,
-    
-    
     -- Open request count
         (SELECT
         COUNT(1)
@@ -48,8 +46,6 @@ SELECT
             ) AND
             trqc.status IN (1000, 500, 100)
     ) open_requests,
-    
-    
     coa_results.testguid AS coa_testguid,
     coa_sign.max_circulationid AS coa_version,
     coa_results.manufacture_date,
@@ -64,8 +60,6 @@ SELECT
     coa_results.total_net_quantity, -- (1.3.2)
     coa_results.carton_lot,
     coa_results.fill_weight,
-    
-    
     -- CoA something ??
         (SELECT
             COUNT(1)
@@ -75,21 +69,17 @@ SELECT
             tr.testguid = coa_results.testguid AND
             UPPER(tr.resultid) LIKE 'QAC%' AND
             tr.resultvaluation IS NOT NULL
-        ) coa_qac,
-    
-    
+    ) coa_qac,
     coa_results.approvedby AS coa_userid,
     e.employeefirstname | | ' ' | | e.employeename AS coa_name,
     e.employeetitle AS coa_title,
     coa_results.approvaldate AS coa_date,
-    
     -- Report revision
     CASE
         WHEN coa_results.approvaldate > $P{REPORT_REV1_DATE}
         THEN 'Y'
         ELSE 'N'
     END AS IS_REPORT_REV1,
-    
     -- Report date format
         (SELECT
             dv.description
@@ -99,12 +89,10 @@ SELECT
             UPPER(dv.domainid) = 'REPORT PARAMETERS' AND
             UPPER(dv.value) = 'DATE FORMAT' AND
             dv.deletion = 'N'
-         ) report_date_format
-    
+    ) report_date_format
 FROM
-    testrequest trq --[trq]
-    JOIN 
-        (
+    testrequest trq --
+    JOIN (
         SELECT
             DISTINCT t.requestguid,
             ts.sampleguid
@@ -123,21 +111,19 @@ FROM
             requestsample rs
         WHERE
             rs.deletion = 'N'
-        ) rs --[rs]
+    ) rs
     ON rs.requestguid = trq.requestguid --
-    
     JOIN physicalsample ps
-      ON ps.sampleguid = rs.sampleguid
-      
+    ON ps.sampleguid = rs.sampleguid
     LEFT JOIN product p
-      ON p.productid = trq.product                   AND p.deletion = 'N'
-    
+    ON p.productid = trq.product AND
+    p.deletion = 'N'
     LEFT JOIN formulation f
-      ON f.productid = trq.product
-      AND f.formulationid = trq.formulationid       AND f.deletion = 'N'
-    
-    LEFT JOIN 
-        (SELECT
+    ON f.productid = trq.product AND
+    f.formulationid = trq.formulationid AND
+    f.deletion = 'N'
+    LEFT JOIN (
+        SELECT
             trq1.requestguid,
             ps1.batchnumber,
             ps1.generic01,
@@ -165,22 +151,19 @@ FROM
             trq1.batchnumber IS NOT NULL AND
             trq1.product IS NOT NULL AND
             trq1.formulationid IS NOT NULL
-        ) coa_primary --[coa_primary]
-    ON coa_primary.requestguid = trq.requestguid 
-      AND coa_primary.batchnumber = ps.batchnumber 
-      AND ( (
+    ) coa_primary
+    ON coa_primary.requestguid = trq.requestguid AND
+    coa_primary.batchnumber = ps.batchnumber AND ( (
             ps.generic01 IS NOT NULL AND
             coa_primary.generic01 = ps.generic01
-            ) 
-          OR ps.generic01 IS NULL
-          ) 
-      AND ( (
+        ) OR
+        ps.generic01 IS NULL
+    ) AND ( (
             ps.generic04 IS NOT NULL AND
             coa_primary.generic04 = ps.generic04
-            ) 
-            OR ps.generic04 IS NULL
-          ) --
-          
+        ) OR
+        ps.generic04 IS NULL
+    ) --
     LEFT JOIN (
         SELECT
             trs.requestguid,
@@ -193,9 +176,8 @@ FROM
             t.deletion = 'N'
         GROUP BY
             trs.requestguid
-      ) coa_sign --[]
+    ) coa_sign
     ON coa_sign.requestguid = coa_primary.primary_requestguid --
-    
     LEFT JOIN (
         SELECT
             t.testguid,
@@ -204,8 +186,14 @@ FROM
             ps.generic04,
             trq.product,
             trq.formulationid,
-            TO_CHAR(TO_DATE(SUBSTR(tr1.textresult, 1, 8), 'YYYYMMDD'),'DD-MON-YYYY') AS manufacture_date,
-            TO_CHAR(TO_DATE(SUBSTR(tr2.textresult, 1, 8), 'YYYYMMDD'),DECODE(tr5.textresult, NULL, 'DD-MON-YYYY', tr5.textresult)) AS expiration_date,
+            TO_CHAR(
+                TO_DATE(SUBSTR(tr1.textresult, 1, 8), 'YYYYMMDD'),
+                'DD-MON-YYYY'
+            ) AS manufacture_date,
+            TO_CHAR(
+                TO_DATE(SUBSTR(tr2.textresult, 1, 8), 'YYYYMMDD'),
+                DECODE(tr5.textresult, NULL, 'DD-MON-YYYY', tr5.textresult)
+            ) AS expiration_date,
             tr3.textresult AS carton_lot,
             tr4.numericalresulttext | | ' ' | | DECODE(tr4.numericalresulttext, NULL, NULL, tr4.unit) AS fill_weight,
             tr6.textresult AS customer_lot,
@@ -270,10 +258,10 @@ FROM
             trq.batchnumber IS NOT NULL AND
             trq.product IS NOT NULL AND
             trq.formulationid IS NOT NULL
-      ) coa_results --[]
+    ) coa_results
     ON coa_results.product = trq.product AND
-      coa_results.formulationid = trq.formulationid AND
-      coa_results.batchnumber = ps.batchnumber AND ( (
+    coa_results.formulationid = trq.formulationid AND
+    coa_results.batchnumber = ps.batchnumber AND ( (
             ps.generic01 IS NOT NULL AND
             coa_results.generic01 = ps.generic01
         ) OR
