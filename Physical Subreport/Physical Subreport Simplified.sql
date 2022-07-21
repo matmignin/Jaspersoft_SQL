@@ -63,7 +63,7 @@ LEFT JOIN specificationtestresult str       --[str] specificationtestresult
 
 LEFT JOIN specificationtest st              --[st] specificationtest
   ON st.specificationid = str.specificationid
-    AND st.versionno = str.versionno -- fix new physical tests not showing up for active batches(1.3.2)
+    AND st.versionno = str.versionno        -- fix new physical tests not showing up for active batches(1.3.2)
     AND st.testguid = str.testguid            --  AND st.deletion = 'N'
 
 WHERE (st.deletion IS NULL
@@ -71,5 +71,5 @@ WHERE (st.deletion IS NULL
   AND $X{ EQUAL ,psi.batchnumber, PHYSBATCHNUMBER}
 
 ORDER BY
-  DECODE(st.seqno,NULL,t.seqno,st.seqno),
-  DECODE(str.seqno,NULL,tr.sequencenumber,str.seqno) --Fix test order not folliwing sequence(1.3.2)
+  DECODE(st.seqno,NULL,t.seqno,st.seqno),   --Fixed test order not folliwing sequence(1.3.2)
+  DECODE(str.seqno,NULL,tr.sequencenumber,str.seqno)
